@@ -1,48 +1,47 @@
 """
-Database Schemas
+Database Schemas for Work in Taiwan Guide
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model corresponds to a MongoDB collection. The collection
+name is the lowercase of the model class name.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
-
-# Example schemas (replace with your own):
+from typing import Optional, List, Dict, Any
 
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
+    """Users collection schema"""
     email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    password_hash: str = Field(..., description="Password hash (server-generated)")
+    name: Optional[str] = Field(None, description="Full name")
+    role: str = Field("user", description="Role: user | admin")
+    preferences: Dict[str, Any] = Field(default_factory=dict, description="User preferences like darkMode, language, etc.")
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class Progress(BaseModel):
+    """User progress checklist per step"""
+    user_id: str = Field(..., description="Reference to user _id as string")
+    items: Dict[str, bool] = Field(default_factory=dict, description="Checklist map: stepKey -> completed")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Step(BaseModel):
+    """Guide step content"""
+    key: str = Field(..., description="Unique key, e.g., passport, job-search")
+    title: str = Field(..., description="Step title")
+    description: Optional[str] = Field(None, description="Short description")
+    content: str = Field("", description="Rich markdown/HTML content")
+    resources: List[Dict[str, str]] = Field(default_factory=list, description="List of {label, url}")
+    estimate_days: Optional[int] = Field(None, description="Estimated processing time in days")
+    cost_estimate: Optional[str] = Field(None, description="Approximate costs text")
+    order: int = Field(0, description="Display order")
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Notification(BaseModel):
+    """User notifications and reminders"""
+    user_id: str = Field(..., description="Reference to user _id as string")
+    type: str = Field(..., description="Type of notification, e.g., deadline, reminder")
+    message: str = Field(..., description="Notification text")
+    due_date: Optional[str] = Field(None, description="ISO date for reminder")
+
+class RecommendationProfile(BaseModel):
+    """Optional profile to tailor recommendations"""
+    user_id: str = Field(...)
+    profession: Optional[str] = None
+    language_level: Optional[str] = None
+    interests: List[str] = Field(default_factory=list)
